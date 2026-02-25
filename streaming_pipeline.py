@@ -37,15 +37,24 @@ class StreamingPipeline:
         # 尝试初始化 Google Sheets，如果失败则禁用导出功能
         try:
             import os
-            if os.path.exists(google_credentials):
-                self.google_exporter = GoogleSheetsExporter(google_credentials)
+            # 总是尝试初始化，GoogleSheetsExporter 会自动检查环境变量
+            self.google_exporter = GoogleSheetsExporter(google_credentials)
+            
+            # 检查是否有环境变量或文件
+            if os.getenv('GOOGLE_TOKEN_BASE64') or os.path.exists(google_credentials):
                 self.sheets_enabled = True
+                if os.getenv('GOOGLE_TOKEN_BASE64'):
+                    print(f"✓ 检测到环境变量 GOOGLE_TOKEN_BASE64，Google Sheets 导出已启用")
+                else:
+                    print(f"✓ 检测到 {google_credentials}，Google Sheets 导出已启用")
             else:
-                print(f"⚠️  未找到 {google_credentials}，Google Sheets 导出功能已禁用")
-                self.google_exporter = None
+                print(f"⚠️  未找到 {google_credentials} 或环境变量 GOOGLE_TOKEN_BASE64")
+                print(f"⚠️  Google Sheets 导出功能已禁用")
                 self.sheets_enabled = False
         except Exception as e:
             print(f"⚠️  Google Sheets 初始化失败: {e}")
+            import traceback
+            print(traceback.format_exc())
             self.google_exporter = None
             self.sheets_enabled = False
         
