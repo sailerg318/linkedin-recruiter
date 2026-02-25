@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn 招聘系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-box {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .status-box.active {
+            display: block;
+        }
+
+        .status-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            font-size: 14px;
+        }
+
+        .status-item.success {
+            border-left-color: #28a745;
+        }
+
+        .status-item.error {
+            border-left-color: #dc3545;
+        }
+
+        .status-item.warning {
+            border-left-color: #ffc107;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-card .label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-item::before {
+            content: "✓";
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background: #28a745;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
+        }
+
+        .result-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .result-link:hover {
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .feature-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 LinkedIn 招聘系统</h1>
+            <p>AI 智能搜索 + 两阶段筛选 + 自动导出</p>
+        </div>
+
+        <div class="main-card">
+            <form id="searchForm">
+                <div class="form-group">
+                    <label for="requirement">招聘需求 *</label>
+                    <textarea 
+                        id="requirement" 
+                        name="requirement" 
+                        placeholder="例如：我想找 Base 伦敦的 OD，7-15年经验，需要咨询+甲方背景"
+                        required
+                    ></textarea>
+                    <div class="help-text">请详细描述职位、地点、年限、背景等要求</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="engine">搜索引擎</label>
+                        <select id="engine" name="engine">
+                            <option value="serper">Serper（推荐）</option>
+                            <option value="gemini">Gemini</option>
+                            <option value="tavily">Tavily</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="searchBatch">搜索批次大小</label>
+                        <input type="number" id="searchBatch" name="searchBatch" value="50" min="10" max="200">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="flashThreshold">Flash 阈值</label>
+                        <input type="number" id="flashThreshold" name="flashThreshold" value="50" min="0" max="100">
+                        <div class="help-text">粗筛分数线（0-100）</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="proThreshold">Pro 阈值</label>
+                        <input type="number" id="proThreshold" name="proThreshold" value="70" min="0" max="100">
+                        <div class="help-text">精筛分数线（0-100）</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="shareEmail">分享邮箱（可选）</label>
+                    <input type="email" id="shareEmail" name="shareEmail" placeholder="example@gmail.com">
+                    <div class="help-text">Google Sheets 将分享给此邮箱</div>
+                </div>
+
+                <button type="submit" class="btn" id="submitBtn">
+                    🚀 开始搜索
+                </button>
+            </form>
+
+            <div class="status-box" id="statusBox">
+                <h3 style="margin-bottom: 15px;">执行状态</h3>
+                <div id="statusContent"></div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="stats-grid" id="statsGrid" style="display: none;">
+                    <div class="stat-card">
+                        <div class="number" id="statSearched">0</div>
+                        <div class="label">搜索</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number" id="statFlash">0</div>
+                        <div class="label">Flash通过</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number" id="statPro">0</div>
+                        <div class="label">Pro通过</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number" id="statExported">0</div>
+                        <div class="label">已导出</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-list">
+                <div class="feature-item">OAuth 认证（2TB空间）</div>
+                <div class="feature-item">Serper 分页搜索</div>
+                <div class="feature-item">岗位扩展（15+关键词）</div>
+                <div class="feature-item">严格地点匹配</div>
+                <div class="feature-item">Flash 快速筛选</div>
+                <div class="feature-item">Pro 深度分析</div>
+                <div class="feature-item">流式处理</div>
+                <div class="feature-item">Google Sheets 导出</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        const form = document.getElementById('searchForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusBox = document.getElementById('statusBox');
+        const statusContent = document.getElementById('statusContent');
+        const progressFill = document.getElementById('progressFill');
+        const statsGrid = document.getElementById('statsGrid');
+
+        let currentTaskId = null;
+        let pollInterval = null;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // 禁用按钮
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ 处理中...';
+            
+            // 显示状态框
+            statusBox.classList.add('active');
+            statusContent.innerHTML = '';
+            progressFill.style.width = '0%';
+            statsGrid.style.display = 'none';
+            
+            // 获取表单数据
+            const formData = {
+                requirement: document.getElementById('requirement').value,
+                engine: document.getElementById('engine').value,
+                searchBatch: parseInt(document.getElementById('searchBatch').value),
+                flashThreshold: parseInt(document.getElementById('flashThreshold').value),
+                proThreshold: parseInt(document.getElementById('proThreshold').value),
+                shareEmail: document.getElementById('shareEmail').value
+            };
+            
+            try {
+                // 启动任务
+                addStatus('🚀 启动搜索任务...', 'info');
+                
+                const response = await fetch(`${API_BASE}/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.task_id) {
+                    currentTaskId = data.task_id;
+                    addStatus(`✓ 任务已启动 (ID: ${data.task_id.substring(0, 8)}...)`, 'success');
+                    
+                    // 开始轮询任务状态
+                    pollTaskStatus();
+                } else {
+                    addStatus('✗ 启动失败', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🚀 开始搜索';
+                }
+                
+            } catch (error) {
+                addStatus(`✗ 错误: ${error.message}`, 'error');
+                addStatus('⚠️ 请确保后端服务已启动: python3 web_server.py', 'warning');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 开始搜索';
+            }
+        });
+        
+        async function pollTaskStatus() {
+            if (!currentTaskId) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/task/${currentTaskId}`);
+                const task = await response.json();
+                
+                // 更新进度
+                progressFill.style.width = `${task.progress}%`;
+                
+                // 更新日志
+                if (task.logs && task.logs.length > 0) {
+                    const lastLog = task.logs[task.logs.length - 1];
+                    if (!statusContent.textContent.includes(lastLog)) {
+                        const type = lastLog.includes('✓') ? 'success' : 
+                                   lastLog.includes('✗') ? 'error' : 
+                                   lastLog.includes('⚠') ? 'warning' : 'info';
+                        addStatus(lastLog, type);
+                    }
+                }
+                
+                // 更新统计
+                if (task.stats) {
+                    updateStats(
+                        task.stats.total_searched,
+                        task.stats.flash_passed,
+                        task.stats.pro_passed,
+                        task.stats.exported
+                    );
+                }
+                
+                // 检查任务状态
+                if (task.status === 'completed') {
+                    clearInterval(pollInterval);
+                    addStatus('✅ 处理完成！', 'success');
+                    
+                    if (task.result && task.result.url) {
+                        const link = document.createElement('a');
+                        link.href = task.result.url;
+                        link.target = '_blank';
+                        link.className = 'result-link';
+                        link.textContent = '📊 打开 Google Sheets';
+                        statusContent.appendChild(link);
+                    }
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🚀 开始搜索';
+                    
+                } else if (task.status === 'failed') {
+                    clearInterval(pollInterval);
+                    addStatus(`✗ 任务失败: ${task.error}`, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '🚀 开始搜索';
+                }
+                
+            } catch (error) {
+                console.error('轮询错误:', error);
+            }
+        }
+        
+        function startPolling() {
+            pollInterval = setInterval(pollTaskStatus, 2000);  // 每2秒轮询一次
+        }
+        
+        function addStatus(message, type = 'info') {
+            const item = document.createElement('div');
+            item.className = `status-item ${type}`;
+            item.textContent = message;
+            statusContent.appendChild(item);
+            statusContent.scrollTop = statusContent.scrollHeight;
+            
+            if (currentTaskId && !pollInterval) {
+                startPolling();
+            }
+        }
+        
+        function updateStats(searched, flash, pro, exported) {
+            document.getElementById('statSearched').textContent = searched;
+            document.getElementById('statFlash').textContent = flash;
+            document.getElementById('statPro').textContent = pro;
+            document.getElementById('statExported').textContent = exported;
+            statsGrid.style.display = 'grid';
+        }
+    </script>
+</body>
+</html>
