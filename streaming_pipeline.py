@@ -108,20 +108,28 @@ class StreamingPipeline:
             print("步骤 2: 初始化 Google Sheets")
             print(f"{'='*70}")
             
-            sheet_url = self._init_google_sheet(
-                requirement_text=user_input,
-                job_title=requirement.get('job_title', ''),
-                share_emails=share_emails
-            )
-            
-            if not sheet_url:
-                print("⚠️  Google Sheets 初始化失败，将继续处理但不导出")
+            try:
+                sheet_url = self._init_google_sheet(
+                    requirement_text=user_input,
+                    job_title=requirement.get('job_title', ''),
+                    share_emails=share_emails
+                )
+                
+                if not sheet_url:
+                    print("⚠️  Google Sheets 初始化失败，将继续处理但不导出")
+                    print("提示：检查环境变量 GOOGLE_TOKEN_BASE64 是否正确设置")
+                    self.sheets_enabled = False
+            except Exception as e:
+                print(f"❌ Google Sheets 初始化异常: {e}")
+                import traceback
+                print(traceback.format_exc())
                 self.sheets_enabled = False
         else:
             print(f"\n{'='*70}")
             print("步骤 2: Google Sheets 导出已禁用")
             print(f"{'='*70}")
             print("⚠️  未配置 Google Sheets OAuth，结果将仅显示在日志中")
+            print("提示：设置环境变量 GOOGLE_TOKEN_BASE64 以启用 Google Sheets 导出")
         
         # 3. 流式处理
         print(f"\n{'='*70}")
