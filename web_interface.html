@@ -413,8 +413,9 @@
                     currentTaskId = data.task_id;
                     addStatus(`✓ 任务已启动 (ID: ${data.task_id.substring(0, 8)}...)`, 'success');
                     
-                    // 开始轮询任务状态
-                    pollTaskStatus();
+                    // 立即开始轮询任务状态
+                    startPolling();
+                    pollTaskStatus();  // 立即执行一次
                 } else {
                     addStatus('✗ 启动失败', 'error');
                     submitBtn.disabled = false;
@@ -510,10 +511,6 @@
             item.textContent = message;
             statusContent.appendChild(item);
             statusContent.scrollTop = statusContent.scrollHeight;
-            
-            if (currentTaskId && !pollInterval) {
-                startPolling();
-            }
         }
         
         function updateStats(searched, flash, pro, exported) {
