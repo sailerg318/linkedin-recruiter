@@ -124,7 +124,11 @@ class StreamingPipeline:
                     share_emails=share_emails
                 )
                 
-                if not sheet_url:
+                if sheet_url:
+                    print(f"✅ Google Sheets 已创建并可访问")
+                    print(f"🔗 链接: {sheet_url}")
+                    print(f"📊 结果将实时写入此表格")
+                else:
                     print("⚠️  Google Sheets 初始化失败，将继续处理但不导出")
                     print("提示：检查环境变量 GOOGLE_TOKEN_BASE64 是否正确设置")
                     self.sheets_enabled = False
@@ -150,7 +154,7 @@ class StreamingPipeline:
             "flash_passed": 0,
             "pro_passed": 0,
             "exported": 0,
-            "url": sheet_url
+            "url": sheet_url  # 立即返回 URL，前端可以马上显示
         }
         
         # 生成搜索批次
