@@ -33,7 +33,22 @@ class StreamingPipeline:
             default_engine=default_engine
         )
         self.screener = DetailedScreening()
-        self.google_exporter = GoogleSheetsExporter(google_credentials)
+        
+        # 尝试初始化 Google Sheets，如果失败则禁用导出功能
+        try:
+            import os
+            if os.path.exists(google_credentials):
+                self.google_exporter = GoogleSheetsExporter(google_credentials)
+                self.sheets_enabled = True
+            else:
+                print(f"⚠️  未找到 {google_credentials}，Google Sheets 导出功能已禁用")
+                self.google_exporter = None
+                self.sheets_enabled = False
+        except Exception as e:
+            print(f"⚠️  Google Sheets 初始化失败: {e}")
+            self.google_exporter = None
+            self.sheets_enabled = False
+        
         self.parser = RequirementParser()
         
         self.spreadsheet = None
@@ -86,20 +101,27 @@ class StreamingPipeline:
         print(f"{'='*70}")
         requirement = self.parser.parse_requirement(user_input)
         
-        # 2. 初始化 Google Sheets
-        print(f"\n{'='*70}")
-        print("步骤 2: 初始化 Google Sheets")
-        print(f"{'='*70}")
-        
-        sheet_url = self._init_google_sheet(
-            requirement_text=user_input,
-            job_title=requirement.get('job_title', ''),
-            share_emails=share_emails
-        )
-        
-        if not sheet_url:
-            print("✗ Google Sheets 初始化失败，流程终止")
-            return {"error": "Google Sheets 初始化失败"}
+        # 2. 初始化 Google Sheets（如果启用）
+        sheet_url = None
+        if self.sheets_enabled:
+            print(f"\n{'='*70}")
+            print("步骤 2: 初始化 Google Sheets")
+            print(f"{'='*70}")
+            
+            sheet_url = self._init_google_sheet(
+                requirement_text=user_input,
+                job_title=requirement.get('job_title', ''),
+                share_emails=share_emails
+            )
+            
+            if not sheet_url:
+                print("⚠️  Google Sheets 初始化失败，将继续处理但不导出")
+                self.sheets_enabled = False
+        else:
+            print(f"\n{'='*70}")
+            print("步骤 2: Google Sheets 导出已禁用")
+            print(f"{'='*70}")
+            print("⚠️  未配置 Google Sheets OAuth，结果将仅显示在日志中")
         
         # 3. 流式处理
         print(f"\n{'='*70}")
@@ -165,10 +187,15 @@ class StreamingPipeline:
                     print(f"    ✓ Pro 通过: {len(pro_passed)} 位")
                     stats["pro_passed"] += len(pro_passed)
                     
-                    # 实时写入 Google Sheets
-                    self._append_to_sheet(pro_passed)
-                    stats["exported"] += len(pro_passed)
-                    print(f"    ✓ 已写入 Google Sheets: {len(pro_passed)} 位")
+                    # 实时写入 Google Sheets（如果启用）
+                    if self.sheets_enabled and self.worksheet:
+                        self._append_to_sheet(pro_passed)
+                        stats["exported"] += len(pro_passed)
+                        print(f"    ✓ 已写入 Google Sheets: {len(pro_passed)} 位")
+                    else:
+                        # 在日志中显示候选人信息
+                        for candidate in pro_passed:
+                            print(f"      - {candidate.get('name', 'Unknown')} | {candidate.get('title', '')} @ {candidate.get('company', '')} | 分数: {candidate.get('final_score', 0)}")
             
             # 显示累计统计
             print(f"\n  累计统计:")
@@ -182,10 +209,21 @@ class StreamingPipeline:
         print(f"{'#'*70}")
         print(f"最终统计:")
         print(f"  搜索: {stats['total_searched']} 位")
-        print(f"  Flash 通过: {stats['flash_passed']} 位 ({stats['flash_passed']/stats['total_searched']*100:.1f}%)")
-        print(f"  Pro 通过: {stats['pro_passed']} 位 ({stats['pro_passed']/stats['flash_passed']*100:.1f}% of Flash)")
-        print(f"  已导出: {stats['exported']} 位")
-        print(f"  Google Sheets: {stats['url']}")
+        if stats['total_searched'] > 0:
+            print(f"  Flash 通过: {stats['flash_passed']} 位 ({stats['flash_passed']/stats['total_searched']*100:.1f}%)")
+        else:
+            print(f"  Flash 通过: {stats['flash_passed']} 位")
+        
+        if stats['flash_passed'] > 0:
+            print(f"  Pro 通过: {stats['pro_passed']} 位 ({stats['pro_passed']/stats['flash_passed']*100:.1f}% of Flash)")
+        else:
+            print(f"  Pro 通过: {stats['pro_passed']} 位")
+        
+        if self.sheets_enabled and stats['url']:
+            print(f"  已导出: {stats['exported']} 位")
+            print(f"  Google Sheets: {stats['url']}")
+        else:
+            print(f"  ⚠️  Google Sheets 导出未启用")
         
         return stats
     
