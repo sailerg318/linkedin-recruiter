@@ -119,6 +119,11 @@ def run_search_task(task_id, data):
         tasks[task_id]['logs'].append(f'✓ 搜索完成: 找到 {result.get("total_searched", 0)} 位候选人')
         tasks[task_id]['logs'].append(f'✓ Flash 通过: {result.get("flash_passed", 0)} 位')
         tasks[task_id]['logs'].append(f'✓ Pro 通过: {result.get("pro_passed", 0)} 位')
+        
+        # 如果有 Google Sheets URL，添加到日志
+        if result.get('url'):
+            tasks[task_id]['logs'].append(f'✓ Google Sheets: {result.get("url")}')
+        
         tasks[task_id]['progress'] = 90
         
         # 更新结果
@@ -131,6 +136,7 @@ def run_search_task(task_id, data):
             'exported': result.get('exported', 0)
         }
         tasks[task_id]['result'] = result
+        tasks[task_id]['sheet_url'] = result.get('url', '')  # 添加 Google Sheets URL
         tasks[task_id]['logs'].append('✓ 处理完成！')
         
         if result.get('url'):

@@ -465,13 +465,24 @@
                     clearInterval(pollInterval);
                     addStatus('✅ 处理完成！', 'success');
                     
-                    if (task.result && task.result.url) {
-                        const link = document.createElement('a');
-                        link.href = task.result.url;
-                        link.target = '_blank';
-                        link.className = 'result-link';
-                        link.textContent = '📊 打开 Google Sheets';
-                        statusContent.appendChild(link);
+                    // 显示 Google Sheets 链接
+                    const sheetUrl = task.sheet_url || (task.result && task.result.url);
+                    if (sheetUrl) {
+                        const linkDiv = document.createElement('div');
+                        linkDiv.style.marginTop = '20px';
+                        linkDiv.style.padding = '15px';
+                        linkDiv.style.background = '#f0f9ff';
+                        linkDiv.style.borderRadius = '8px';
+                        linkDiv.style.border = '2px solid #28a745';
+                        linkDiv.innerHTML = `
+                            <div style="margin-bottom: 10px; font-weight: 600; color: #333;">
+                                📊 结果已导出到 Google Sheets
+                            </div>
+                            <a href="${sheetUrl}" target="_blank" class="result-link" style="display: inline-block;">
+                                🔗 打开 Google Sheets（所有人可见）
+                            </a>
+                        `;
+                        statusContent.appendChild(linkDiv);
                     }
                     
                     submitBtn.disabled = false;

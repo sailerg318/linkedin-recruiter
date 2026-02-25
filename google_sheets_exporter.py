@@ -107,13 +107,14 @@ class GoogleSheetsExporterOAuth:
         """连接到 Google Sheets"""
         return self.authenticate()
     
-    def create_spreadsheet(self, title: str, share_emails: List[str] = None) -> str:
+    def create_spreadsheet(self, title: str, share_emails: List[str] = None, public: bool = True) -> str:
         """
         创建新的 Google Sheets
         
         Args:
             title: 表格标题
             share_emails: 分享邮箱列表
+            public: 是否设置为所有人可见（默认 True）
             
         Returns:
             表格 URL
@@ -125,12 +126,20 @@ class GoogleSheetsExporterOAuth:
         try:
             spreadsheet = self.client.create(title)
             
-            # 分享给指定邮箱
+            # 设置为所有人可见（任何人都可以查看）
+            if public:
+                try:
+                    spreadsheet.share('', perm_type='anyone', role='reader')
+                    print(f"  ✓ 已设置为所有人可见（只读）")
+                except Exception as e:
+                    print(f"  ⚠️  设置公开访问失败: {e}")
+            
+            # 分享给指定邮箱（编辑权限）
             if share_emails:
                 for email in share_emails:
                     try:
                         spreadsheet.share(email, perm_type='user', role='writer')
-                        print(f"  ✓ 已分享给: {email}")
+                        print(f"  ✓ 已分享给: {email} (编辑权限)")
                     except Exception as e:
                         print(f"  ⚠️  分享失败 ({email}): {e}")
             
