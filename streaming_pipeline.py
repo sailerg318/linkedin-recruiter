@@ -346,6 +346,13 @@ class StreamingPipeline:
             self.spreadsheet = self.google_exporter.client.create(sheet_name)
             self.worksheet = self.spreadsheet.get_worksheet(0)
             
+            # 设置为所有人可见（任何人都可以查看）
+            try:
+                self.spreadsheet.share('', perm_type='anyone', role='reader')
+                print(f"  ✓ 已设置为所有人可见（只读）")
+            except Exception as e:
+                print(f"  ⚠️  设置公开访问失败: {e}")
+            
             # 设置表头
             self.google_exporter._setup_header(
                 self.worksheet,
@@ -353,11 +360,14 @@ class StreamingPipeline:
                 0  # 候选人数量暂时为0
             )
             
-            # 分享
+            # 分享给指定邮箱（编辑权限）
             if share_emails:
                 for email in share_emails:
-                    self.spreadsheet.share(email, perm_type='user', role='writer')
-                    print(f"  ✓ 已分享给: {email}")
+                    try:
+                        self.spreadsheet.share(email, perm_type='user', role='writer')
+                        print(f"  ✓ 已分享给: {email} (编辑权限)")
+                    except Exception as e:
+                        print(f"  ⚠️  分享失败 ({email}): {e}")
             
             url = self.spreadsheet.url
             print(f"  ✓ Google Sheets 创建成功")
