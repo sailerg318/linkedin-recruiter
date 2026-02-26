@@ -117,19 +117,24 @@ class HybridProfileExtractor:
                     companies.add(company)
         info["companies"] = list(companies)[:10]  # 限制数量
         
-        # 5. 检查咨询背景
-        consulting_keywords = [
-            "McKinsey", "BCG", "Bain", "Mercer", "Aon", 
-            "Willis Towers Watson", "WTW", "Korn Ferry",
-            "Deloitte", "PwC", "EY", "KPMG",
-            "德勤", "普华永道", "安永", "毕马威"
-        ]
-        info["has_consulting_background"] = any(
-            kw.lower() in content.lower() for kw in consulting_keywords
-        )
+        # 5-6. 从工作经历中提取详细信息并判断背景
+        experience_details = self._extract_experience_details(content)
+        info["experience_details"] = experience_details
         
-        # 6. 检查甲方背景（有多个公司经验）
-        info["has_corporate_background"] = len(info["companies"]) > 1
+        # 判断咨询背景（从实际工作经历中判断）
+        consulting_companies = [exp for exp in experience_details if exp.get("is_consulting")]
+        info["has_consulting_background"] = len(consulting_companies) > 0
+        info["consulting_years"] = sum(exp.get("duration_years", 0) for exp in consulting_companies)
+        info["consulting_companies"] = [exp["company"] for exp in consulting_companies]
+        
+        # 判断甲方背景（非咨询公司）
+        corporate_companies = [exp for exp in experience_details if not exp.get("is_consulting")]
+        info["has_corporate_background"] = len(corporate_companies) > 0
+        info["corporate_years"] = sum(exp.get("duration_years", 0) for exp in corporate_companies)
+        info["corporate_companies"] = [exp["company"] for exp in corporate_companies]
+        
+        # 职位晋升轨迹分析
+        info["career_progression"] = self._analyze_career_progression(experience_details)
         
         # 7. 提取技能
         skills_section = re.search(r'## Skills(.*?)(?=##|$)', content, re.DOTALL)
@@ -252,6 +257,91 @@ class HybridProfileExtractor:
         
         merged["extraction_method"] = "hybrid"
         return merged
+    
+    def _extract_experience_details(self, content: str) -> list:
+        """从工作经历中提取详细信息（公司、职位、时长、类型）"""
+        from datetime import datetime
+        
+        # 咨询公司列表
+        consulting_firms = {
+            "mckinsey", "bain", "bcg", "boston consulting",
+            "deloitte", "pwc", "ey", "kpmg", "accenture",
+            "oliver wyman", "at kearney", "booz allen",
+            "mercer", "aon", "willis towers watson", "wtw", "korn ferry",
+            "德勤", "普华永道", "安永", "毕马威", "埃森哲"
+        }
+        
+        experiences = []
+        current_year = datetime.now().year
+        
+        # 提取工作经历块（通常以公司名开头，包含时间范围）
+        # 匹配格式：公司名 + 时间范围
+        experience_pattern = r'###?\s*([^\n]+?)\s*\n.*?(\d{4})\s*[-–]\s*(?:(\d{4})|Present|至今|现在)'
+        matches = re.findall(experience_pattern, content, re.IGNORECASE | re.DOTALL)
+        
+        for match in matches:
+            company = match[0].strip()
+            start_year = int(match[1])
+            end_year = int(match[2]) if match[2] else current_year
+            
+            # 计算工作时长
+            duration = end_year - start_year
+            if duration < 0 or duration > 50:  # 合理性检查
+                continue
+            
+            # 判断是否为咨询公司
+            is_consulting = any(firm in company.lower() for firm in consulting_firms)
+            
+            experiences.append({
+                "company": company,
+                "start_year": start_year,
+                "end_year": end_year,
+                "duration_years": duration,
+                "is_consulting": is_consulting,
+                "is_current": end_year == current_year
+            })
+        
+        # 按开始时间排序（最新的在前）
+        experiences.sort(key=lambda x: x["start_year"], reverse=True)
+        
+        return experiences
+    
+    def _analyze_career_progression(self, experiences: list) -> dict:
+        """分析职位晋升轨迹"""
+        if not experiences:
+            return {
+                "has_progression": False,
+                "total_companies": 0,
+                "avg_tenure_years": 0,
+                "job_hopping": False
+            }
+        
+        total_companies = len(experiences)
+        total_years = sum(exp.get("duration_years", 0) for exp in experiences)
+        avg_tenure = total_years / total_companies if total_companies > 0 else 0
+        
+        # 判断是否频繁跳槽（平均任期 < 2年）
+        job_hopping = avg_tenure < 2 and total_companies > 2
+        
+        # 分析职位级别变化（简化版）
+        # 可以通过职位名称中的关键词判断：Junior, Senior, Lead, Director, VP, C-level
+        seniority_keywords = {
+            "junior": 1, "associate": 2, "senior": 3,
+            "lead": 4, "principal": 4, "staff": 4,
+            "manager": 5, "director": 6, "vp": 7,
+            "vice president": 7, "svp": 8, "cto": 9, "ceo": 9
+        }
+        
+        # 这里简化处理，实际需要从职位名称中提取
+        has_progression = total_companies > 1 and avg_tenure >= 2
+        
+        return {
+            "has_progression": has_progression,
+            "total_companies": total_companies,
+            "avg_tenure_years": round(avg_tenure, 1),
+            "job_hopping": job_hopping,
+            "longest_tenure": max((exp.get("duration_years", 0) for exp in experiences), default=0)
+        }
     
     def _calculate_experience_years(self, content: str) -> int:
         """从工作经历中计算实际工作年限"""
