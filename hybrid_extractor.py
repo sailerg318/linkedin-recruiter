@@ -139,17 +139,23 @@ class HybridProfileExtractor:
             skills = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', skills_text)
             info["key_skills"] = list(set(skills))[:10]
         
-        # 8. 估算工作年限
-        years_patterns = [
-            r'(\d+)\+?\s*年',
-            r'(\d+)\+?\s*years?',
-        ]
-        years_found = []
-        for pattern in years_patterns:
-            matches = re.findall(pattern, content, re.IGNORECASE)
-            years_found.extend([int(m) for m in matches])
-        if years_found:
-            info["experience_years"] = max(years_found)
+        # 8. 计算工作年限（从工作经历中计算）
+        # 优先从工作经历时间计算，如果没有则用正则表达式估算
+        experience_years = self._calculate_experience_years(content)
+        if experience_years > 0:
+            info["experience_years"] = experience_years
+        else:
+            # 备用方案：从文本中提取年限数字
+            years_patterns = [
+                r'(\d+)\+?\s*年',
+                r'(\d+)\+?\s*years?',
+            ]
+            years_found = []
+            for pattern in years_patterns:
+                matches = re.findall(pattern, content, re.IGNORECASE)
+                years_found.extend([int(m) for m in matches])
+            if years_found:
+                info["experience_years"] = max(years_found)
         
         return info
     
@@ -246,6 +252,54 @@ class HybridProfileExtractor:
         
         merged["extraction_method"] = "hybrid"
         return merged
+    
+    def _calculate_experience_years(self, content: str) -> int:
+        """从工作经历中计算实际工作年限"""
+        from datetime import datetime
+        
+        # 提取工作经历中的时间范围
+        # 常见格式：
+        # - "2020 - Present"
+        # - "Jan 2018 - Dec 2020"
+        # - "2015 - 2018"
+        # - "2019年 - 至今"
+        
+        time_patterns = [
+            # 匹配 "YYYY - Present" 或 "YYYY - 至今"
+            r'(\d{4})\s*[-–]\s*(?:Present|至今|现在|Now)',
+            # 匹配 "YYYY - YYYY"
+            r'(\d{4})\s*[-–]\s*(\d{4})',
+            # 匹配 "Mon YYYY - Mon YYYY"
+            r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})\s*[-–]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})',
+            # 匹配 "Mon YYYY - Present"
+            r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})\s*[-–]\s*(?:Present|至今)',
+        ]
+        
+        current_year = datetime.now().year
+        earliest_year = None
+        
+        for pattern in time_patterns:
+            matches = re.findall(pattern, content, re.IGNORECASE)
+            for match in matches:
+                if isinstance(match, tuple):
+                    # 提取开始年份
+                    start_year = int(match[0]) if match[0] else None
+                    if start_year and (earliest_year is None or start_year < earliest_year):
+                        earliest_year = start_year
+                else:
+                    # 单个匹配（Present 情况）
+                    start_year = int(match)
+                    if earliest_year is None or start_year < earliest_year:
+                        earliest_year = start_year
+        
+        # 如果找到最早的工作年份，计算到现在的年限
+        if earliest_year and earliest_year <= current_year:
+            years = current_year - earliest_year
+            # 合理性检查：工作年限应该在 0-50 年之间
+            if 0 <= years <= 50:
+                return years
+        
+        return 0
     
     def _extract_name_from_url(self, url: str) -> str:
         """从URL提取姓名（备用）"""
